@@ -1,0 +1,119 @@
+# In[2]:
+
+aapl = web.get_data_yahoo('AAPL', '1990/01/01')['Adj Close']
+
+
+# In[12]:
+
+ma60 = pd.rolling_mean(aapl, 60, min_periods=50)
+
+
+# In[14]:
+
+ewma60 = pd.ewma(aapl, span=60)
+
+
+# In[33]:
+
+get_ipython().magic(u'matplotlib inline')
+#%matplotlib inline
+fig, axes = plt.subplots(nrows=2, ncols = 1, sharex = True, sharey = True, figsize=(12,7))
+aapl.plot(style='k-', ax = axes[0])
+ma60.plot(style = 'k--', ax = axes[0])
+aapl.plot(style='k-', ax = axes[1])
+ewma60.plot(style='k--', ax = axes[1])
+axes[0].set_title('Simple MA')
+axes[1].set_title('Exponential-Weight MA')
+
+
+# In[62]:
+
+spx = web.get_data_yahoo('SPY', '1999/01/01')['Adj Close']
+
+
+# In[63]:
+
+returns = spx.pct_change()
+
+
+# In[37]:
+
+def to_index(rets):
+    index = (1+rets).cumprod()
+    first_loc = max(index.index.get_loc(index.idxmax()) -1, 0)
+    index.values[first_loc] =1
+    return index
+
+
+# In[64]:
+
+def trend_signal(rets, lookback, lag):
+    signal = pd.rolling_sum(rets,lookback, min_periods=lookback - 5)
+    return signal.shift(lag)
+
+
+# In[140]:
+
+def trade_rets(rets, lookback, lag):
+    signal = trend_signal(rets, lookback, lag)
+    trade_friday = signal.resample('W-FRI').resample('B', fill_method = 'ffill')
+    trade_returns = trade_friday.shift(1)*rets
+    return trade_returns[:len(trade_returns)]
+
+
+# In[111]:
+
+def trade_sr(rets,lookback, lag):
+    re = trade_rets(rets,lookback, lag)
+    return re.mean()/re.std() * np.sqrt(252)
+
+
+# In[141]:
+
+trade_returns = trade_rets(returns, 300, 1)
+
+
+# In[98]:
+
+to_index(trade_rets).plot()
+
+
+# In[110]:
+
+trade_rets.mean()/trade_rets.std() * np.sqrt(252)
+
+
+# In[135]:
+
+trade_sr(returns, 300 ,1)
+
+
+# In[149]:
+
+i = 0
+results = pd.DataFrame(columns=('lb', 'lag', 'sr'))
+for lb in range (30, 300, 10):
+    for lag in range (0, 10, 1):
+        trade_returns = trade_rets(returns, lb, lag)
+        sr = trade_returns.mean()/trade_returns.std() * np.sqrt(252)
+        results.loc[i] =[lb, lag, sr]
+        i = i+1
+
+
+# In[152]:
+
+results.sort('sr', ascending = False)
+
+
+# In[123]:
+
+i = 0
+for lb in range (30, 600, 30):
+    for hold in range (10, 200, 10):
+        #for lag in range (1, 100, 5):
+            i = i+1
+
+
+# In[78]:
+
+cumrets.values[2655]
